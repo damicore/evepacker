@@ -22,7 +22,7 @@ types:
     file_entry:
         seq:
             - id: filename
-              size: 12
+              size: 8
               type: str
               encoding: ascii
             - id: padding
