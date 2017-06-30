@@ -14,30 +14,28 @@ def decrypt(data):
             bo.append(byte+128)
     return bo
 
-def extract_all():
-    global pkd
+def extract_all(pkd_fname):
+    pkd = open(pkd_fname, 'rb').read()
     file_qtty = unpack('<i', pkd[4:8])[0]
-
+    extraction_path = pkd_fname.split('.')[0]
+    if not os.path.exists(extraction_path):
+        os.makedirs(extraction_path)
     for i in range(file_qtty):
-
         pos = 8+i*40
         cur_file_rcrd = pkd[pos:pos+40]
-
         file_name = cur_file_rcrd[0:12].rstrip('\x00')
         file_start = unpack('<i', cur_file_rcrd[-4:])[0]
         file_size = unpack('<i', cur_file_rcrd[-8:-4])[0]
         file_end = file_start + file_size
-
         data = bytearray(pkd[file_start:file_end])
         if file_name[-4:] == '.SCR':
-            print('Unencrypting')
             data = decrypt(data)
-        fo = open(path + '/' + file_name, 'wb')
+        fo = open(extraction_path + '/' + file_name, 'wb')
         fo.write(data)
 
-def repack(fn):
+def repack(fn, package):
     file_to_insert = open(fn, 'rb').read()
-    global pkd
+    pkd = open(package, 'rb').read()
     file_qtty = unpack('<i', pkd[4:8])[0]
     delta = 0
     found = False
@@ -67,23 +65,22 @@ def repack(fn):
             pkd[pos+32:pos+36] = pack('<i', new_file_size) #updating filesize
             print(pkd[pos+32:pos+36])
             continue
-    fo = open(path + '/' + 'scr.pkd', 'wb') #generalizar con filename
-    print(path + '/' + 'scr.pkd')
-    fo.write(pkd)
+    if found:
+        fo = open(package, 'wb') #generalizar con filename
+        fo.write(pkd)
+    else:
+        'File not found in package, no changes were made.'
 
-if len(sys.argv) != 2:
-    print('Usage: eveunpack [option] <filename>')
-    print('where option is -e (for extract) -i (for insert)')
+if len(sys.argv) < 3 or len(sys.argv) > 4 or sys.argv[1] == '-h':
+    print('Usage: eveunpack [option] <filename> [<destination package>]')
+    print('Where option is -e (for extract) -i (for insert).')
     quit()
 
-#scr_fname = sys.argv[1]
-pkd = open('scr.pkd', 'rb').read() #scr_fname
+if sys.argv[1] == '-e':
+    pkd_fname = sys.argv[2]
+    extract_all(pkd_fname)
 
-path = sys.argv[1].split('.')[0]
-
-if not os.path.exists(path):
-    os.makedirs(path)
-
-# todo: handle switches
-# extract_all()
-repack(sys.argv[1])
+elif sys.argv[1] == '-i':
+    pkd_fname = sys.argv[3]
+    pkd = open(pkd_fname, 'rb').read()
+    repack(sys.argv[2], sys.argv[3])
